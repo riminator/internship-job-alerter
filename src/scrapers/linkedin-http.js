@@ -73,13 +73,19 @@ export async function scrapeLinkedInHttp(category = "tech") {
           if (!isIntern) return;
         }
 
-        const id = `linkedin:${category}:${company}:${title}:${url}`
-          .replace(/\s+/g, "-").toLowerCase().slice(0, 200);
+        // Use only the stable numeric job ID from the URL (strips ?position=&pagenum= params)
+        const jobIdMatch = url.match(/(\d{7,})/);
+        const stableId = jobIdMatch
+          ? `linkedin:${category}:${jobIdMatch[1]}`
+          : `linkedin:${category}:${company}:${title}`.replace(/\s+/g, "-").toLowerCase().slice(0, 200);
 
-        if (seen.has(id)) return;
-        seen.add(id);
+        // Clean URL — strip query params for the link sent to Discord
+        const cleanUrl = url.split("?")[0];
 
-        jobs.push({ id, title, company, location, url, source: "LinkedIn", postedDate: posted, season: detectSeason(title) });
+        if (seen.has(stableId)) return;
+        seen.add(stableId);
+
+        jobs.push({ id: stableId, title, company, location, url: cleanUrl, source: "LinkedIn", postedDate: posted, season: detectSeason(title) });
       });
 
     } catch (err) {
