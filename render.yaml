@@ -1,5 +1,5 @@
 services:
-  - type: worker
+  - type: web
     name: job-alert-bot
     runtime: node
     buildCommand: npm install && npx playwright install chromium
@@ -7,6 +7,6 @@ services:
     plan: free
     envVars:
       - key: DISCORD_WEBHOOK_URL
-        sync: false        # Render will prompt you to enter this manually in the dashboard
+        sync: false        # Enter this manually in the Render dashboard
       - key: NODE_ENV
         value: production

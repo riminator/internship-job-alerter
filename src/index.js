@@ -4,6 +4,7 @@
 //  and sends Discord alerts for new listings.
 // ─────────────────────────────────────────────
 
+import http from "http";
 import cron from "node-cron";
 import config from "../config.js";
 import { scrapeSimplify } from "./scrapers/simplify.js";
@@ -49,6 +50,37 @@ async function runCheck() {
   }
 }
 
+// ─── Keep-alive HTTP server (required by Render free web service) ────────────
+//  Render expects a web service to bind a port. We also self-ping every 14 min
+//  to prevent the free tier from spinning down after 15 min of inactivity.
+
+function startKeepAliveServer() {
+  const port = process.env.PORT || 3000;
+
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Job Alert Bot is running ✅");
+  });
+
+  server.listen(port, () => {
+    console.log(`[Server] Listening on port ${port}`);
+  });
+
+  // Self-ping every 14 minutes so Render never idles us out
+  const appUrl = process.env.RENDER_EXTERNAL_URL;
+  if (appUrl) {
+    setInterval(async () => {
+      try {
+        const { default: axios } = await import("axios");
+        await axios.get(appUrl, { timeout: 10_000 });
+        console.log("[Keep-alive] Pinged self ✅");
+      } catch (err) {
+        console.warn("[Keep-alive] Self-ping failed:", err.message);
+      }
+    }, 14 * 60 * 1000);
+  }
+}
+
 // ─── Startup ────────────────────────────────
 
 async function main() {
@@ -61,6 +93,9 @@ async function main() {
     console.warn("\n⚠️  DISCORD_WEBHOOK_URL is not set.");
     console.warn("   Set it as an env variable or in config.js before alerts will work.\n");
   }
+
+  // Start HTTP server (satisfies Render's port binding requirement)
+  startKeepAliveServer();
 
   // Run once immediately on startup
   await runCheck();
