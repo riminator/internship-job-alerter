@@ -1,13 +1,12 @@
 // ─────────────────────────────────────────────
 //  Discord Notifier
-//  Sends rich embed alerts via a Discord webhook
-//  whenever new jobs are found.
+//  Sends rich embed alerts via a Discord webhook.
+//  Tech jobs → discordWebhookUrl
+//  Business jobs → discordBusinessWebhookUrl
 // ─────────────────────────────────────────────
 
 import axios from "axios";
 import config from "../config.js";
-
-const WEBHOOK_URL = config.discordWebhookUrl;
 
 // Accent colour per source
 const SOURCE_COLORS = {
@@ -22,78 +21,87 @@ const SOURCE_ICONS = {
   LinkedIn: "💼",
 };
 
+// Category colour tints (applied when channel differs from source)
+const CATEGORY_COLORS = {
+  tech:     null,          // use source colour
+  business: 0x2ecc71,     // green for business/finance
+};
+
 /**
- * Send a batch of new job listings to Discord.
- * Each job gets its own message so sizing is always consistent.
- * @param {Array<{id, title, company, location, url, source, postedDate}>} jobs
+ * Send tech job alerts to the #tech-jobs channel.
  */
 export async function notifyDiscord(jobs) {
-  if (!WEBHOOK_URL) {
-    console.error("[Discord] DISCORD_WEBHOOK_URL is not set. Skipping notification.");
+  await sendJobs(jobs, config.discordWebhookUrl, "tech");
+}
+
+/**
+ * Send business/finance job alerts to the #business-jobs channel.
+ */
+export async function notifyBusiness(jobs) {
+  await sendJobs(jobs, config.discordBusinessWebhookUrl, "business");
+}
+
+/**
+ * Send a plain status message to the tech channel.
+ */
+export async function notifyStatus(message) {
+  if (!config.discordWebhookUrl) return;
+  await post(config.discordWebhookUrl, {
+    username:   "Job Alert Bot",
+    avatar_url: "https://i.imgur.com/4M34hi2.png",
+    content:    message,
+  });
+}
+
+// ─── Core send logic ────────────────────────
+
+async function sendJobs(jobs, webhookUrl, category) {
+  if (!webhookUrl) {
+    console.warn(`[Discord] No webhook set for category "${category}". Skipping.`);
     return;
   }
-  if (jobs.length === 0) return;
+  if (!jobs || jobs.length === 0) return;
 
-  // Send a single summary header first
-  await post({
-    username: "Job Alert Bot",
+  // Summary header
+  await post(webhookUrl, {
+    username:   "Job Alert Bot",
     avatar_url: "https://i.imgur.com/4M34hi2.png",
-    content: jobs.length === 1
-      ? `## 📋 1 new position found`
-      : `## 📋 ${jobs.length} new positions found`,
+    content:    jobs.length === 1
+      ? `## 📋 1 new ${category} position found`
+      : `## 📋 ${jobs.length} new ${category} positions found`,
   });
 
   await sleep(500);
 
-  // Send each job as its own clean embed
   for (const job of jobs) {
-    await post({
-      username: "Job Alert Bot",
+    await post(webhookUrl, {
+      username:   "Job Alert Bot",
       avatar_url: "https://i.imgur.com/4M34hi2.png",
-      embeds: [buildEmbed(job)],
+      embeds:     [buildEmbed(job, category)],
     });
-    // Stay well within Discord's rate limit (5 req / 2s per webhook)
     await sleep(700);
   }
 }
 
-/**
- * Send a plain status message (startup ping, errors, etc.)
- * @param {string} message
- */
-export async function notifyStatus(message) {
-  if (!WEBHOOK_URL) return;
-  await post({
-    username: "Job Alert Bot",
-    avatar_url: "https://i.imgur.com/4M34hi2.png",
-    content: message,
-  });
-}
+// ─── Embed builder ──────────────────────────
 
-// ─── Helpers ────────────────────────────────
+function buildEmbed(job, category) {
+  const sourceColor = SOURCE_COLORS[job.source] ?? 0x57f287;
+  const color = category === "business"
+    ? (CATEGORY_COLORS.business)
+    : sourceColor;
 
-function buildEmbed(job) {
-  const color = SOURCE_COLORS[job.source] ?? 0x57f287;
-  const icon  = SOURCE_ICONS[job.source]  ?? "🔎";
-
-  // Truncate long values so fields never overflow
+  const icon     = SOURCE_ICONS[job.source] ?? "🔎";
   const company  = truncate(job.company  || "Unknown",  40);
   const location = truncate(job.location || "Remote / Not specified", 40);
   const posted   = truncate(job.postedDate || "—", 20);
-  const season   = truncate(job.season   || "—", 30);
+  const season   = truncate(job.season    || "—", 30);
 
   return {
-    // Title is the job name — clicking it opens the application link
-    title: truncate(job.title, 200),
-    url:   job.url || undefined,
+    title:       truncate(job.title, 200),
+    url:         job.url || undefined,
     color,
-
-    // Description gives a clean at-a-glance summary line
     description: `**${company}**  ·  ${location}`,
-
-    // Row 1: Location + Posted (2 inline = even)
-    // Row 2: Term (full-width so it never wraps awkwardly)
-    // Row 3: Source tag (full-width)
     fields: [
       {
         name:   "📍 Location",
@@ -116,7 +124,6 @@ function buildEmbed(job) {
         inline: false,
       },
     ],
-
     footer: {
       text: `Job Alert Bot  •  ${job.source}`,
     },
@@ -124,9 +131,11 @@ function buildEmbed(job) {
   };
 }
 
-async function post(payload) {
+// ─── Helpers ────────────────────────────────
+
+async function post(webhookUrl, payload) {
   try {
-    await axios.post(WEBHOOK_URL, payload, {
+    await axios.post(webhookUrl, payload, {
       headers: { "Content-Type": "application/json" },
       timeout: 10_000,
     });

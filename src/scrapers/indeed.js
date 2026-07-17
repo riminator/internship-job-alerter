@@ -8,21 +8,22 @@ import { chromium } from "playwright";
 import config from "../../config.js";
 import { detectSeason } from "../utils/season.js";
 
-const { filters, sources } = config;
+const { sources } = config;
 
 /**
  * Scrape Indeed for jobs matching the configured keywords/locations.
- * @returns {Promise<Array<{id, title, company, location, url, source, postedDate}>>}
+ * @param {"tech"|"business"} category  which filter set to use
+ * @returns {Promise<Array>}
  */
-export async function scrapeIndeed() {
+export async function scrapeIndeed(category = "tech") {
   if (!sources.indeed.enabled) return [];
 
+  const filters = category === "business" ? config.businessFilters : config.filters;
   const jobs = [];
   const browser = await chromium.launch({ headless: true });
 
   try {
     for (const keyword of filters.keywords.slice(0, 3)) {
-      // Limit to first 3 keywords to avoid rate limits
       const locationQuery = filters.locations[0] ?? "United States";
       const searchUrl = `${sources.indeed.baseUrl}?q=${encodeURIComponent(keyword)}&l=${encodeURIComponent(locationQuery)}&fromage=${filters.maxAgeDays}&sort=date`;
 

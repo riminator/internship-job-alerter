@@ -4,31 +4,44 @@
 // ─────────────────────────────────────────────
 
 export default {
-  // Discord webhook URL — paste from:
-  //   Server Settings → Integrations → Webhooks → New Webhook → Copy URL
+  // ─── Discord webhooks ──────────────────────────────────────────────────────
+  //  Create two separate webhooks — one per channel — and paste the URLs here.
+  //  Server Settings → Integrations → Webhooks → New Webhook → Copy URL
+
+  // #tech-jobs channel  (software engineering, SWE internships, new grad dev)
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || "",
 
-  // How often to check for new jobs (cron syntax)
-  // Default: every 30 minutes
-  // Examples: "*/15 * * * *"  = every 15 min
-  //           "0 9 * * *"     = once daily at 9 AM
-  checkInterval: "*/30 * * * *",
+  // #business-jobs channel  (finance, consulting, M&A, PE, healthcare, etc.)
+  discordBusinessWebhookUrl: process.env.DISCORD_BUSINESS_WEBHOOK_URL || "",
 
-  // Search filters applied across all sources
+  // How often to check for new jobs (cron syntax)
+  // "*/5 * * * *"  = every 5 minutes
+  // "*/30 * * * *" = every 30 minutes
+  // "0 9 * * *"    = once daily at 9 AM
+  checkInterval: "*/5 * * * *",
+
+  // ─── Tech / SWE filters ───────────────────────────────────────────────────
   filters: {
-    // Keywords to search for (at least one must match the job title or description)
     keywords: [
       "software engineer intern",
       "software developer intern",
       "SWE intern",
       "frontend intern",
       "backend intern",
+      "full stack intern",
+      "mobile engineer intern",
+      "ios intern",
+      "android intern",
+      "data engineer intern",
+      "ml engineer intern",
+      "machine learning intern",
       "summer 2026 intern",
       "fall 2026 intern",
       "spring 2026 intern",
+      "new grad software",
     ],
 
-    // Locations to search (leave empty [] to search remotely / all locations)
+    // Locations to search
     locations: ["United States", "Remote"],
 
     // Only show jobs posted within this many days
@@ -38,12 +51,66 @@ export default {
     titleExclude: ["senior", "staff", "principal", "lead", "manager"],
   },
 
-  // ─── Hiring seasons ─────────────────────────────────────────────────────────
-  //  label           — shown in Discord alerts
-  //  titleKeywords   — words in a job title that indicate this term
-  //  applicationOpen — when companies typically start posting for this term
-  //  applicationClose— when most postings have closed
-  //  repos           — Simplify GitHub repo URLs covering this term
+  // ─── Business filters ─────────────────────────────────────────────────────
+  businessFilters: {
+    keywords: [
+      // Investment Banking / M&A
+      "investment banking intern",
+      "investment banking analyst",
+      "M&A intern",
+      "mergers and acquisitions intern",
+      "IB intern",
+      // Private Equity / Venture Capital
+      "private equity intern",
+      "PE intern",
+      "venture capital intern",
+      "VC intern",
+      // Consulting
+      "management consulting intern",
+      "business analyst intern",
+      "strategy consulting intern",
+      "McKinsey intern",
+      "BCG intern",
+      "Bain intern",
+      // Finance / Accounting
+      "financial analyst intern",
+      "corporate finance intern",
+      "equity research intern",
+      "hedge fund intern",
+      "asset management intern",
+      "wealth management intern",
+      "accounting intern",
+      "audit intern",
+      "tax intern",
+      // Insurance
+      "insurance analyst intern",
+      "actuarial intern",
+      "actuary intern",
+      "underwriting intern",
+      // Healthcare / Biotech Business
+      "healthcare analyst intern",
+      "healthcare consulting intern",
+      "biotech business intern",
+      "pharma business intern",
+      "hospital operations intern",
+      // General business / operations
+      "operations analyst intern",
+      "strategy intern",
+      "corporate development intern",
+      "business development intern",
+      "real estate analyst intern",
+      "supply chain analyst intern",
+    ],
+
+    locations: ["United States", "Remote"],
+
+    maxAgeDays: 7,
+
+    // Exclude purely technical roles that might accidentally match
+    titleExclude: ["software", "engineer", "developer", "data scientist", "senior", "manager", "director"],
+  },
+
+  // ─── Hiring seasons ───────────────────────────────────────────────────────
   seasons: [
     {
       label: "Summer 2026",
@@ -59,7 +126,7 @@ export default {
       titleKeywords: ["fall 2026", "fall26", "fa26", "autumn 2026"],
       applicationOpen:  "2026-04-01",
       applicationClose: "2026-08-31",
-      repos: [],  // no public Simplify repo yet — covered by Indeed/LinkedIn keywords
+      repos: [],
     },
     {
       label: "Spring 2026",
@@ -79,10 +146,10 @@ export default {
     },
   ],
 
-  // Sources to scrape — set enabled: false to disable one
+  // ─── Sources ──────────────────────────────────────────────────────────────
   sources: {
     simplify: {
-      enabled: true,
+      enabled: true,  // tech roles only (GitHub repos)
     },
     indeed: {
       enabled: true,

@@ -1,7 +1,9 @@
 // ─────────────────────────────────────────────
 //  Job Alert Bot — Main Entry Point
 //  Runs on a cron schedule, scrapes all sources,
-//  and sends Discord alerts for new listings.
+//  and routes alerts to the correct Discord channel:
+//    Tech jobs    → #tech-jobs    (DISCORD_WEBHOOK_URL)
+//    Business jobs→ #business-jobs (DISCORD_BUSINESS_WEBHOOK_URL)
 // ─────────────────────────────────────────────
 
 import http from "http";
@@ -11,48 +13,67 @@ import { scrapeSimplify } from "./scrapers/simplify.js";
 import { scrapeIndeed } from "./scrapers/indeed.js";
 import { scrapeLinkedIn } from "./scrapers/linkedin.js";
 import { loadSeenIds, saveSeenIds, filterNewJobs } from "./state.js";
-import { notifyDiscord, notifyStatus } from "./notifier.js";
+import { notifyDiscord, notifyBusiness, notifyStatus } from "./notifier.js";
 
-// ─── Single check cycle ──────────────────────
+// ─── Check cycle ─────────────────────────────
 
 async function runCheck() {
   console.log(`\n[${new Date().toISOString()}] Starting job check...`);
 
   const seenIds = loadSeenIds();
-  const allJobs = [];
 
-  // Run all enabled scrapers in parallel
-  const results = await Promise.allSettled([
+  // ── Tech scrape (uses config.filters) ───────
+  const techResults = await Promise.allSettled([
     scrapeSimplify(),
-    scrapeIndeed(),
-    scrapeLinkedIn(),
+    scrapeIndeed("tech"),
+    scrapeLinkedIn("tech"),
   ]);
 
-  for (const result of results) {
-    if (result.status === "fulfilled") {
-      allJobs.push(...result.value);
-    } else {
-      console.error("[Runner] Scraper error:", result.reason?.message ?? result.reason);
-    }
+  // ── Business scrape (uses config.businessFilters) ──
+  const bizResults = await Promise.allSettled([
+    scrapeIndeed("business"),
+    scrapeLinkedIn("business"),
+  ]);
+
+  const techJobs = [];
+  const bizJobs  = [];
+
+  for (const r of techResults) {
+    if (r.status === "fulfilled") techJobs.push(...r.value);
+    else console.error("[Runner] Tech scraper error:", r.reason?.message ?? r.reason);
   }
 
-  console.log(`[Runner] Total jobs fetched: ${allJobs.length}`);
+  for (const r of bizResults) {
+    if (r.status === "fulfilled") bizJobs.push(...r.value);
+    else console.error("[Runner] Business scraper error:", r.reason?.message ?? r.reason);
+  }
 
-  const newJobs = filterNewJobs(allJobs, seenIds);
-  console.log(`[Runner] New jobs to alert: ${newJobs.length}`);
+  console.log(`[Runner] Fetched — tech: ${techJobs.length}, business: ${bizJobs.length}`);
 
-  if (newJobs.length > 0) {
-    await notifyDiscord(newJobs);
+  // Filter to only new jobs (shared state file covers both)
+  const newTech = filterNewJobs(techJobs, seenIds);
+  const newBiz  = filterNewJobs(bizJobs,  seenIds);
+
+  console.log(`[Runner] New — tech: ${newTech.length}, business: ${newBiz.length}`);
+
+  if (newTech.length > 0) {
+    await notifyDiscord(newTech);
+  }
+  if (newBiz.length > 0) {
+    await notifyBusiness(newBiz);
+  }
+
+  if (newTech.length > 0 || newBiz.length > 0) {
     saveSeenIds(seenIds);
-    console.log(`[Runner] ✅ Sent ${newJobs.length} alert(s) to Discord.`);
+    console.log(`[Runner] ✅ Sent ${newTech.length} tech + ${newBiz.length} business alert(s).`);
   } else {
     console.log("[Runner] No new jobs — nothing to send.");
   }
 }
 
-// ─── Keep-alive HTTP server (required by Render free web service) ────────────
-//  Render expects a web service to bind a port. We also self-ping every 14 min
-//  to prevent the free tier from spinning down after 15 min of inactivity.
+// ─── Keep-alive HTTP server ───────────────────
+//  Render free web service requires a bound port.
+//  Self-ping every 4 min keeps us under the 5-min check interval.
 
 function startKeepAliveServer() {
   const port = process.env.PORT || 3000;
@@ -66,7 +87,6 @@ function startKeepAliveServer() {
     console.log(`[Server] Listening on port ${port}`);
   });
 
-  // Self-ping every 14 minutes so Render never idles us out
   const appUrl = process.env.RENDER_EXTERNAL_URL;
   if (appUrl) {
     setInterval(async () => {
@@ -77,11 +97,11 @@ function startKeepAliveServer() {
       } catch (err) {
         console.warn("[Keep-alive] Self-ping failed:", err.message);
       }
-    }, 14 * 60 * 1000);
+    }, 4 * 60 * 1000); // every 4 minutes
   }
 }
 
-// ─── Startup ────────────────────────────────
+// ─── Startup ─────────────────────────────────
 
 async function main() {
   console.log("╔══════════════════════════════════════╗");
@@ -90,23 +110,27 @@ async function main() {
   console.log("╚══════════════════════════════════════╝");
 
   if (!config.discordWebhookUrl) {
-    console.warn("\n⚠️  DISCORD_WEBHOOK_URL is not set.");
-    console.warn("   Set it as an env variable or in config.js before alerts will work.\n");
+    console.warn("\n⚠️  DISCORD_WEBHOOK_URL not set — tech alerts disabled.");
+  }
+  if (!config.discordBusinessWebhookUrl) {
+    console.warn("⚠️  DISCORD_BUSINESS_WEBHOOK_URL not set — business alerts disabled.\n");
   }
 
-  // Start HTTP server (satisfies Render's port binding requirement)
   startKeepAliveServer();
 
   // Run once immediately on startup
   await runCheck();
 
-  // Then schedule recurring checks
+  // Schedule recurring checks
   cron.schedule(config.checkInterval, runCheck);
 
-  console.log(`\n⏰ Scheduled. Next check in ~${humanInterval(config.checkInterval)}.`);
+  console.log(`\n⏰ Scheduled every ${humanInterval(config.checkInterval)}.`);
 
   await notifyStatus(
-    `✅ **Job Alert Bot is running!**\nMonitoring: ${config.filters.keywords.join(", ")}\nSources: Simplify, Indeed, LinkedIn\nChecking every: ${humanInterval(config.checkInterval)}`
+    `✅ **Job Alert Bot is running!**\n` +
+    `📡 Tech channel: ${config.discordWebhookUrl ? "✅ connected" : "❌ not set"}\n` +
+    `💼 Business channel: ${config.discordBusinessWebhookUrl ? "✅ connected" : "❌ not set"}\n` +
+    `⏱️ Checking every: ${humanInterval(config.checkInterval)}`
   );
 }
 
@@ -115,7 +139,7 @@ main().catch((err) => {
   process.exit(1);
 });
 
-// ─── Helpers ────────────────────────────────
+// ─── Helpers ─────────────────────────────────
 
 function humanInterval(cronExpr) {
   const minuteMatch = cronExpr.match(/^\*\/(\d+) \* \* \* \*$/);

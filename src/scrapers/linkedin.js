@@ -8,15 +8,17 @@ import { chromium } from "playwright";
 import config from "../../config.js";
 import { detectSeason } from "../utils/season.js";
 
-const { filters, sources } = config;
+const { sources } = config;
 
 /**
- * Scrape LinkedIn Jobs for matching internship listings.
- * @returns {Promise<Array<{id, title, company, location, url, source, postedDate}>>}
+ * Scrape LinkedIn Jobs for matching listings.
+ * @param {"tech"|"business"} category  which filter set to use
+ * @returns {Promise<Array>}
  */
-export async function scrapeLinkedIn() {
+export async function scrapeLinkedIn(category = "tech") {
   if (!sources.linkedin.enabled) return [];
 
+  const filters = category === "business" ? config.businessFilters : config.filters;
   const jobs = [];
   const browser = await chromium.launch({ headless: true });
 
@@ -24,7 +26,6 @@ export async function scrapeLinkedIn() {
     for (const keyword of filters.keywords.slice(0, 3)) {
       const locationQuery = filters.locations[0] ?? "United States";
 
-      // f_TPR: time posted — r86400 = 24h, r259200 = 3d, r604800 = 7d
       const daySeconds = filters.maxAgeDays * 86_400;
       const searchUrl =
         `${sources.linkedin.baseUrl}?keywords=${encodeURIComponent(keyword)}` +
