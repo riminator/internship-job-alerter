@@ -53,61 +53,58 @@ export default {
 
   // ─── Business filters ─────────────────────────────────────────────────────
   businessFilters: {
+    // NOTE: business roles use "Analyst" / "Associate" — NOT "intern" in title.
+    // Keep keywords broad enough to match real posting language.
     keywords: [
       // Investment Banking / M&A
-      "investment banking intern",
-      "investment banking analyst",
+      "investment banking",
+      "investment bank",
+      "mergers and acquisitions",
+      "M&A analyst",
       "M&A intern",
-      "mergers and acquisitions intern",
-      "IB intern",
       // Private Equity / Venture Capital
-      "private equity intern",
-      "PE intern",
-      "venture capital intern",
-      "VC intern",
+      "private equity",
+      "venture capital",
       // Consulting
-      "management consulting intern",
-      "business analyst intern",
-      "strategy consulting intern",
-      "McKinsey intern",
-      "BCG intern",
-      "Bain intern",
+      "management consulting",
+      "strategy consulting",
+      "management consultant",
+      "business analyst",
       // Finance / Accounting
-      "financial analyst intern",
-      "corporate finance intern",
-      "equity research intern",
-      "hedge fund intern",
-      "asset management intern",
-      "wealth management intern",
+      "financial analyst",
+      "corporate finance",
+      "equity research",
+      "equity research analyst",
+      "hedge fund",
+      "asset management",
+      "wealth management",
       "accounting intern",
       "audit intern",
       "tax intern",
-      // Insurance
-      "insurance analyst intern",
-      "actuarial intern",
-      "actuary intern",
-      "underwriting intern",
-      // Healthcare / Biotech Business
-      "healthcare analyst intern",
-      "healthcare consulting intern",
-      "biotech business intern",
-      "pharma business intern",
-      "hospital operations intern",
-      // General business / operations
-      "operations analyst intern",
-      "strategy intern",
-      "corporate development intern",
-      "business development intern",
-      "real estate analyst intern",
-      "supply chain analyst intern",
+      // Insurance / Actuarial
+      "actuarial",
+      "actuary",
+      "underwriting",
+      "insurance analyst",
+      // Healthcare / Pharma Business
+      "healthcare analyst",
+      "healthcare consulting",
+      "pharma analyst",
+      "hospital operations",
+      // General business
+      "operations analyst",
+      "corporate development",
+      "business development",
+      "real estate analyst",
+      "supply chain analyst",
     ],
 
     locations: ["United States", "Remote"],
 
     maxAgeDays: 7,
 
-    // Exclude purely technical roles that might accidentally match
-    titleExclude: ["software", "engineer", "developer", "data scientist", "senior", "manager", "director"],
+    // Only exclude roles that are clearly NOT business-track
+    titleExclude: ["senior", "staff", "principal", "vp ", "managing director", "partner"],
   },
 
   // ─── Hiring seasons ───────────────────────────────────────────────────────

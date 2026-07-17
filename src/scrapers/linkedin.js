@@ -71,7 +71,7 @@ export async function scrapeLinkedIn(category = "tech") {
           const excluded = filters.titleExclude.some((ex) => titleLower.includes(ex.toLowerCase()));
           if (excluded) continue;
 
-          const id = `linkedin:${card.company}:${card.title}:${card.url}`
+          const id = `linkedin:${category}:${card.company}:${card.title}:${card.url}`
             .replace(/\s+/g, "-")
             .toLowerCase()
             .slice(0, 200);

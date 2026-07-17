@@ -66,7 +66,7 @@ export async function scrapeIndeed(category = "tech") {
           const excluded = filters.titleExclude.some((ex) => titleLower.includes(ex.toLowerCase()));
           if (excluded) continue;
 
-          const id = `indeed:${card.company}:${card.title}:${card.url}`
+          const id = `indeed:${category}:${card.company}:${card.title}:${card.url}`
             .replace(/\s+/g, "-")
             .toLowerCase()
             .slice(0, 200);
