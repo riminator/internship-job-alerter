@@ -23,22 +23,43 @@ export default {
   // ─── Tech / SWE filters ───────────────────────────────────────────────────
   filters: {
     keywords: [
+      // Software Engineering
       "software engineer intern",
+      "software engineering intern",
       "software developer intern",
       "SWE intern",
+      // Frontend / Backend / Fullstack
       "frontend intern",
+      "front-end intern",
+      "front end intern",
       "backend intern",
+      "back-end intern",
+      "back end intern",
+      "backend engineer intern",
+      "frontend engineer intern",
       "full stack intern",
-      "mobile engineer intern",
+      "fullstack intern",
+      "full-stack intern",
+      // Mobile
       "ios intern",
+      "ios engineer intern",
       "android intern",
+      "android engineer intern",
+      "mobile engineer intern",
+      "mobile developer intern",
+      // Data / ML
       "data engineer intern",
+      "data engineering intern",
       "ml engineer intern",
       "machine learning intern",
+      "ai intern",
+      "artificial intelligence intern",
+      // New grad / seasonal
       "summer 2026 intern",
       "fall 2026 intern",
       "spring 2026 intern",
       "new grad software",
+      "new grad engineer",
     ],
 
     // Locations to search
