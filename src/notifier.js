@@ -9,16 +9,22 @@ import config from "../config.js";
 
 const WEBHOOK_URL = config.discordWebhookUrl;
 
-// Colour palette per source
+// Accent colour per source
 const SOURCE_COLORS = {
-  Simplify: 0x5865f2,   // blurple
-  Indeed: 0x003a9b,     // indeed blue
-  LinkedIn: 0x0a66c2,   // linkedin blue
+  Simplify: 0x5865f2,  // blurple
+  Indeed:   0x003a9b,  // indeed blue
+  LinkedIn: 0x0a66c2,  // linkedin blue
+};
+
+const SOURCE_ICONS = {
+  Simplify: "🟣",
+  Indeed:   "🔵",
+  LinkedIn: "💼",
 };
 
 /**
- * Send a batch of new job listings to Discord as embeds.
- * Discord allows up to 10 embeds per webhook message.
+ * Send a batch of new job listings to Discord.
+ * Each job gets its own message so sizing is always consistent.
  * @param {Array<{id, title, company, location, url, source, postedDate}>} jobs
  */
 export async function notifyDiscord(jobs) {
@@ -28,77 +34,104 @@ export async function notifyDiscord(jobs) {
   }
   if (jobs.length === 0) return;
 
-  // Split into chunks of 10 (Discord limit)
-  const chunks = chunkArray(jobs, 10);
+  // Send a single summary header first
+  await post({
+    username: "Job Alert Bot",
+    avatar_url: "https://i.imgur.com/4M34hi2.png",
+    content: jobs.length === 1
+      ? `## 📋 1 new position found`
+      : `## 📋 ${jobs.length} new positions found`,
+  });
 
-  for (const chunk of chunks) {
-    const embeds = chunk.map((job) => buildEmbed(job));
-    const payload = {
-      username: "Job Alert Bot 🤖",
+  await sleep(500);
+
+  // Send each job as its own clean embed
+  for (const job of jobs) {
+    await post({
+      username: "Job Alert Bot",
       avatar_url: "https://i.imgur.com/4M34hi2.png",
-      content: chunk.length === 1
-        ? `📢 **1 new job found!**`
-        : `📢 **${chunk.length} new jobs found!**`,
-      embeds,
-    };
-
-    try {
-      await axios.post(WEBHOOK_URL, payload, {
-        headers: { "Content-Type": "application/json" },
-        timeout: 10_000,
-      });
-    } catch (err) {
-      console.error(`[Discord] Webhook POST failed: ${err.message}`);
-    }
-
-    // Respect Discord rate limit: 5 requests / 2 seconds per webhook
-    await new Promise((r) => setTimeout(r, 600));
+      embeds: [buildEmbed(job)],
+    });
+    // Stay well within Discord's rate limit (5 req / 2s per webhook)
+    await sleep(700);
   }
 }
 
 /**
- * Send a plain-text status message (e.g. startup confirmation).
+ * Send a plain status message (startup ping, errors, etc.)
  * @param {string} message
  */
 export async function notifyStatus(message) {
   if (!WEBHOOK_URL) return;
-  try {
-    await axios.post(
-      WEBHOOK_URL,
-      { username: "Job Alert Bot 🤖", content: message },
-      { headers: { "Content-Type": "application/json" }, timeout: 8_000 }
-    );
-  } catch (err) {
-    console.error(`[Discord] Status message failed: ${err.message}`);
-  }
+  await post({
+    username: "Job Alert Bot",
+    avatar_url: "https://i.imgur.com/4M34hi2.png",
+    content: message,
+  });
 }
 
 // ─── Helpers ────────────────────────────────
 
 function buildEmbed(job) {
   const color = SOURCE_COLORS[job.source] ?? 0x57f287;
+  const icon  = SOURCE_ICONS[job.source]  ?? "🔎";
 
-  const fields = [
-    { name: "🏢 Company", value: job.company || "—", inline: true },
-    { name: "📍 Location", value: job.location || "Remote / Not specified", inline: true },
-    { name: "📅 Posted", value: job.postedDate || "—", inline: true },
-    { name: "🔗 Source", value: job.source, inline: true },
-  ];
+  // Truncate long values so fields never overflow
+  const company  = truncate(job.company  || "Unknown",  40);
+  const location = truncate(job.location || "Remote / Not specified", 40);
+  const posted   = truncate(job.postedDate || "—", 20);
 
   return {
-    title: job.title,
-    url: job.url || undefined,
+    // Title is the job name — clicking it opens the application link
+    title: truncate(job.title, 200),
+    url:   job.url || undefined,
     color,
-    fields,
-    footer: { text: "Job Alert Bot • via " + job.source },
+
+    // Description gives a clean at-a-glance summary line
+    description: `**${company}**  ·  ${location}`,
+
+    // Two inline fields on one row (pairs of 2 render evenly)
+    fields: [
+      {
+        name:   "📍 Location",
+        value:  location,
+        inline: true,
+      },
+      {
+        name:   "📅 Posted",
+        value:  posted,
+        inline: true,
+      },
+      // Full-width row for the source tag
+      {
+        name:   "Source",
+        value:  `${icon} ${job.source}`,
+        inline: false,
+      },
+    ],
+
+    footer: {
+      text: `Job Alert Bot  •  ${job.source}`,
+    },
     timestamp: new Date().toISOString(),
   };
 }
 
-function chunkArray(arr, size) {
-  const chunks = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
+async function post(payload) {
+  try {
+    await axios.post(WEBHOOK_URL, payload, {
+      headers: { "Content-Type": "application/json" },
+      timeout: 10_000,
+    });
+  } catch (err) {
+    console.error(`[Discord] Webhook POST failed: ${err.message}`);
   }
-  return chunks;
+}
+
+function truncate(str, max) {
+  return str.length > max ? str.slice(0, max - 1) + "…" : str;
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }

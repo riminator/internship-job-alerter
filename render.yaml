@@ -1,0 +1,12 @@
+services:
+  - type: worker
+    name: job-alert-bot
+    runtime: node
+    buildCommand: npm install && npx playwright install chromium
+    startCommand: node src/index.js
+    plan: free
+    envVars:
+      - key: DISCORD_WEBHOOK_URL
+        sync: false        # Render will prompt you to enter this manually in the dashboard
+      - key: NODE_ENV
+        value: production
