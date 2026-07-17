@@ -53,58 +53,82 @@ export default {
 
   // ─── Business filters ─────────────────────────────────────────────────────
   businessFilters: {
-    // NOTE: business roles use "Analyst" / "Associate" — NOT "intern" in title.
-    // Keep keywords broad enough to match real posting language.
     keywords: [
-      // Investment Banking / M&A
+      // Investment Banking / M&A  (very specific — won't overlap with tech)
       "investment banking",
       "investment bank",
       "mergers and acquisitions",
       "M&A analyst",
       "M&A intern",
+      "M&A associate",
       // Private Equity / Venture Capital
       "private equity",
       "venture capital",
-      // Consulting
+      "leveraged buyout",
+      // Consulting  (specific enough)
       "management consulting",
       "strategy consulting",
       "management consultant",
-      "business analyst",
-      // Finance / Accounting
-      "financial analyst",
+      // Finance  (specific finance terms, not just "analyst")
       "corporate finance",
       "equity research",
-      "equity research analyst",
       "hedge fund",
       "asset management",
       "wealth management",
+      "investment management",
+      "capital markets",
+      "fixed income",
+      "portfolio management",
       "accounting intern",
       "audit intern",
       "tax intern",
+      "financial planning",
       // Insurance / Actuarial
       "actuarial",
       "actuary",
       "underwriting",
-      "insurance analyst",
       // Healthcare / Pharma Business
-      "healthcare analyst",
       "healthcare consulting",
       "pharma analyst",
       "hospital operations",
-      // General business
-      "operations analyst",
+      // Corporate strategy
       "corporate development",
-      "business development",
+      "corporate strategy",
+      "business development intern",
       "real estate analyst",
-      "supply chain analyst",
     ],
 
     locations: ["United States", "Remote"],
 
     maxAgeDays: 7,
 
-    // Only exclude roles that are clearly NOT business-track
-    titleExclude: ["senior", "staff", "principal", "vp ", "managing director", "partner"],
+    // Seniority exclusions
+    titleExclude: ["senior", "staff", "principal", "vp ", "managing director", "partner", "director"],
+
+    // If ANY of these words appear in the title, it's a tech role — reject it
+    // even if a business keyword matched (e.g. "Business Analyst - Software Systems")
+    techExclude: [
+      "software",
+      "engineer",
+      "engineering",
+      "developer",
+      "devops",
+      "data science",
+      "machine learning",
+      "ml ",
+      "ai ",
+      "artificial intelligence",
+      "cybersecurity",
+      "cloud",
+      "backend",
+      "frontend",
+      "full stack",
+      "fullstack",
+      "it analyst",
+      "systems analyst",
+      "platform",
+      "infrastructure",
+    ],
   },
 
   // ─── Hiring seasons ───────────────────────────────────────────────────────

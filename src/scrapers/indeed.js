@@ -62,9 +62,15 @@ export async function scrapeIndeed(category = "tech") {
           const matchesKeyword = filters.keywords.some((kw) => titleLower.includes(kw.toLowerCase()));
           if (!matchesKeyword) continue;
 
-          // Apply exclusion filter
+          // Apply seniority exclusion filter
           const excluded = filters.titleExclude.some((ex) => titleLower.includes(ex.toLowerCase()));
           if (excluded) continue;
+
+          // For business category: reject if any tech indicator word appears in title
+          if (category === "business" && filters.techExclude) {
+            const isTech = filters.techExclude.some((ex) => titleLower.includes(ex.toLowerCase()));
+            if (isTech) continue;
+          }
 
           const id = `indeed:${category}:${card.company}:${card.title}:${card.url}`
             .replace(/\s+/g, "-")

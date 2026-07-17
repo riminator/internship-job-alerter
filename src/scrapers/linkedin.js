@@ -71,6 +71,12 @@ export async function scrapeLinkedIn(category = "tech") {
           const excluded = filters.titleExclude.some((ex) => titleLower.includes(ex.toLowerCase()));
           if (excluded) continue;
 
+          // For business category: reject if any tech indicator word appears in title
+          if (category === "business" && filters.techExclude) {
+            const isTech = filters.techExclude.some((ex) => titleLower.includes(ex.toLowerCase()));
+            if (isTech) continue;
+          }
+
           const id = `linkedin:${category}:${card.company}:${card.title}:${card.url}`
             .replace(/\s+/g, "-")
             .toLowerCase()
