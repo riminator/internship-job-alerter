@@ -1,24 +1,41 @@
 // ─────────────────────────────────────────────
 //  Simplify Jobs scraper
-//  Reads the public Summer 2026 Internships README
-//  from the SimplifyJobs GitHub repository and
-//  parses the HTML table into job objects.
+//  Reads all active-season internship READMEs
+//  from the SimplifyJobs GitHub repos and parses
+//  their HTML tables into job objects.
 // ─────────────────────────────────────────────
 
 import axios from "axios";
 import * as cheerio from "cheerio";
 import config from "../../config.js";
+import { detectSeason } from "../utils/season.js";
 
-const { filters, sources } = config;
+const { filters, sources, seasons } = config;
 
 /**
- * Fetch and parse the SimplifyJobs internship list.
- * @returns {Promise<Array<{id, title, company, location, url, source, postedDate}>>}
+ * Parse a "posted age" string like "1d", "3d", "7d", "12h" into days.
+ * Returns Infinity if unparseable (so it gets filtered out).
  */
-export async function scrapeSimplify() {
-  if (!sources.simplify.enabled) return [];
+function ageToDays(ageStr) {
+  if (!ageStr) return Infinity;
+  const s = ageStr.trim().toLowerCase();
+  const hourMatch  = s.match(/^(\d+)h$/);
+  const dayMatch   = s.match(/^(\d+)d$/);
+  const weekMatch  = s.match(/^(\d+)w$/);
+  if (hourMatch)  return parseInt(hourMatch[1])  / 24;
+  if (dayMatch)   return parseInt(dayMatch[1]);
+  if (weekMatch)  return parseInt(weekMatch[1])  * 7;
+  return Infinity;
+}
 
-  const response = await axios.get(sources.simplify.repoUrl, {
+/**
+ * Fetch and parse one Simplify GitHub README.
+ * @param {string} url
+ * @param {string} seasonLabel  — label to attach when title has no explicit term
+ * @returns {Array}
+ */
+async function scrapeRepo(url, seasonLabel) {
+  const response = await axios.get(url, {
     headers: { "User-Agent": "job-alert-bot/1.0" },
     timeout: 15_000,
   });
@@ -27,42 +44,38 @@ export async function scrapeSimplify() {
   const jobs = [];
   let lastCompany = "";
 
-  // The README uses HTML <table> with <tbody><tr><td> rows
   $("table tbody tr").each((_, row) => {
     const cells = $(row).find("td");
     if (cells.length < 4) return;
 
-    // Company cell — may contain "↳" for continuation rows
+    // Company — "↳" means carry over from previous row
     const companyCellText = $(cells[0]).text().trim();
-    const companyLink = $(cells[0]).find("a").first();
-    const companyName = companyLink.text().trim() || companyCellText;
-
-    // "↳" means same company as previous row
+    const companyName = $(cells[0]).find("a").first().text().trim() || companyCellText;
     const company = companyCellText === "↳" ? lastCompany : companyName;
     if (company && companyCellText !== "↳") lastCompany = company;
 
-    // Role / title
-    const title = $(cells[1]).text().trim();
-
-    // Location
+    const title    = $(cells[1]).text().trim();
     const location = $(cells[2]).text().trim();
-
-    // Application link — grab the first <a> href in the cell
-    const appCell = $(cells[3]);
-    const appLink = appCell.find("a").first().attr("href") ?? "";
-
-    // Age / date posted (5th cell if present)
-    const postedDate = cells.length >= 5 ? $(cells[4]).text().trim() : "";
+    const appLink  = $(cells[3]).find("a").first().attr("href") ?? "";
+    const ageStr   = cells.length >= 5 ? $(cells[4]).text().trim() : "";
 
     if (!title || !company) return;
 
+    // ── 7-day age filter ──────────────────────
+    if (ageToDays(ageStr) > filters.maxAgeDays) return;
+
+    // ── Keyword filter ────────────────────────
     const titleLower = title.toLowerCase();
-
-    // Filter by keywords
     const matchesKeyword = filters.keywords.some((kw) => titleLower.includes(kw.toLowerCase()));
-    if (!matchesKeyword) return;
 
-    // Filter out excluded titles
+    // Also accept if the season's own title keywords appear in the title
+    const matchesSeason = seasons.some((s) =>
+      s.titleKeywords.some((kw) => titleLower.includes(kw.toLowerCase()))
+    );
+
+    if (!matchesKeyword && !matchesSeason) return;
+
+    // ── Exclusion filter ──────────────────────
     const excluded = filters.titleExclude.some((ex) => titleLower.includes(ex.toLowerCase()));
     if (excluded) return;
 
@@ -76,11 +89,41 @@ export async function scrapeSimplify() {
       title,
       company,
       location,
-      url: appLink.startsWith("http") ? appLink : `https://simplify.jobs`,
-      source: "Simplify",
-      postedDate,
+      url:        appLink.startsWith("http") ? appLink : "https://simplify.jobs",
+      source:     "Simplify",
+      postedDate: ageStr || "—",
+      season:     detectSeason(title) || seasonLabel,
     });
   });
 
   return jobs;
+}
+
+/**
+ * Scrape all season repos defined in config.
+ * @returns {Promise<Array>}
+ */
+export async function scrapeSimplify() {
+  if (!sources.simplify.enabled) return [];
+
+  const allJobs = [];
+  const seen = new Set();
+
+  for (const season of seasons) {
+    for (const repoUrl of season.repos) {
+      try {
+        const jobs = await scrapeRepo(repoUrl, season.label);
+        for (const job of jobs) {
+          if (!seen.has(job.id)) {
+            seen.add(job.id);
+            allJobs.push(job);
+          }
+        }
+      } catch (err) {
+        console.warn(`[Simplify] Failed to scrape ${repoUrl}: ${err.message}`);
+      }
+    }
+  }
+
+  return allJobs;
 }

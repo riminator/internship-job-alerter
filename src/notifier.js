@@ -80,6 +80,7 @@ function buildEmbed(job) {
   const company  = truncate(job.company  || "Unknown",  40);
   const location = truncate(job.location || "Remote / Not specified", 40);
   const posted   = truncate(job.postedDate || "—", 20);
+  const season   = truncate(job.season   || "—", 30);
 
   return {
     // Title is the job name — clicking it opens the application link
@@ -90,7 +91,9 @@ function buildEmbed(job) {
     // Description gives a clean at-a-glance summary line
     description: `**${company}**  ·  ${location}`,
 
-    // Two inline fields on one row (pairs of 2 render evenly)
+    // Row 1: Location + Posted (2 inline = even)
+    // Row 2: Term (full-width so it never wraps awkwardly)
+    // Row 3: Source tag (full-width)
     fields: [
       {
         name:   "📍 Location",
@@ -102,7 +105,11 @@ function buildEmbed(job) {
         value:  posted,
         inline: true,
       },
-      // Full-width row for the source tag
+      {
+        name:   "🗓️ Term",
+        value:  season,
+        inline: false,
+      },
       {
         name:   "Source",
         value:  `${icon} ${job.source}`,

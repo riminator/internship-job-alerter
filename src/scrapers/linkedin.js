@@ -6,6 +6,7 @@
 
 import { chromium } from "playwright";
 import config from "../../config.js";
+import { detectSeason } from "../utils/season.js";
 
 const { filters, sources } = config;
 
@@ -76,12 +77,13 @@ export async function scrapeLinkedIn() {
 
           jobs.push({
             id,
-            title: card.title,
-            company: card.company,
-            location: card.location,
-            url: card.url,
-            source: "LinkedIn",
+            title:      card.title,
+            company:    card.company,
+            location:   card.location,
+            url:        card.url,
+            source:     "LinkedIn",
             postedDate: card.postedDate,
+            season:     detectSeason(card.title),
           });
         }
       } catch (err) {
