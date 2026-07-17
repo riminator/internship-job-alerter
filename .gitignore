@@ -1,0 +1,3 @@
+node_modules/
+.job_state.json
+.env
