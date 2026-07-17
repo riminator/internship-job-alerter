@@ -10,8 +10,7 @@ import http from "http";
 import cron from "node-cron";
 import config from "../config.js";
 import { scrapeSimplify } from "./scrapers/simplify.js";
-import { scrapeIndeed } from "./scrapers/indeed.js";
-import { scrapeLinkedIn } from "./scrapers/linkedin.js";
+import { scrapeLinkedInHttp } from "./scrapers/linkedin-http.js";
 import { loadSeenIds, saveSeenIds, filterNewJobs } from "./state.js";
 import { notifyDiscord, notifyBusiness, notifyStatus } from "./notifier.js";
 
@@ -22,17 +21,15 @@ async function runCheck() {
 
   const seenIds = loadSeenIds();
 
-  // ── Tech scrape (uses config.filters) ───────
+  // ── Tech scrape ──────────────────────────────
   const techResults = await Promise.allSettled([
     scrapeSimplify(),
-    scrapeIndeed("tech"),
-    scrapeLinkedIn("tech"),
+    scrapeLinkedInHttp("tech"),
   ]);
 
-  // ── Business scrape (uses config.businessFilters) ──
+  // ── Business scrape ──────────────────────────
   const bizResults = await Promise.allSettled([
-    scrapeIndeed("business"),
-    scrapeLinkedIn("business"),
+    scrapeLinkedInHttp("business"),
   ]);
 
   const techJobs = [];
