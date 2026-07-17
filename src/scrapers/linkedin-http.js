@@ -67,6 +67,12 @@ export async function scrapeLinkedInHttp(category = "tech") {
           if (isTech) return;
         }
 
+        // Intern/co-op only — reject full-time roles
+        if (filters.internOnly) {
+          const isIntern = ["intern", "internship", "co-op", "coop", "co op", "summer analyst", "summer associate"].some(w => titleLower.includes(w));
+          if (!isIntern) return;
+        }
+
         const id = `linkedin:${category}:${company}:${title}:${url}`
           .replace(/\s+/g, "-").toLowerCase().slice(0, 200);
 

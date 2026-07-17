@@ -26,30 +26,39 @@ export default {
       // Software Engineering
       "software engineer intern",
       "software engineering intern",
+      "software engineering co-op",
       "software developer intern",
+      "software developer co-op",
       "SWE intern",
+      "SWE co-op",
       // Frontend / Backend / Fullstack
       "frontend intern",
+      "frontend co-op",
       "front-end intern",
       "front end intern",
       "backend intern",
+      "backend co-op",
       "back-end intern",
       "back end intern",
       "backend engineer intern",
       "frontend engineer intern",
       "full stack intern",
+      "full stack co-op",
       "fullstack intern",
       "full-stack intern",
       // Mobile
       "ios intern",
+      "ios co-op",
       "ios engineer intern",
       "android intern",
+      "android co-op",
       "android engineer intern",
       "mobile engineer intern",
       "mobile developer intern",
       // Data / ML
       "data engineer intern",
       "data engineering intern",
+      "data engineering co-op",
       "ml engineer intern",
       "machine learning intern",
       "ai intern",
@@ -70,53 +79,65 @@ export default {
 
     // Exclude jobs whose title contains these words (case-insensitive)
     titleExclude: ["senior", "staff", "principal", "lead", "manager"],
+
+    // Only alert on internships and co-ops — reject any full-time title
+    internOnly: true,
   },
 
   // ─── Business filters ─────────────────────────────────────────────────────
   businessFilters: {
     keywords: [
-      // Investment Banking / M&A  (very specific — won't overlap with tech)
-      "investment banking",
-      "investment bank",
-      "mergers and acquisitions",
-      "M&A analyst",
+      // Investment Banking / M&A
+      "investment banking intern",
+      "investment banking co-op",
+      "investment banking summer analyst",
+      "investment banking analyst intern",
+      "investment bank intern",
+      "mergers and acquisitions intern",
       "M&A intern",
-      "M&A associate",
+      "M&A co-op",
       // Private Equity / Venture Capital
-      "private equity",
-      "venture capital",
-      "leveraged buyout",
-      // Consulting  (specific enough)
-      "management consulting",
-      "strategy consulting",
-      "management consultant",
-      // Finance  (specific finance terms, not just "analyst")
-      "corporate finance",
-      "equity research",
-      "hedge fund",
-      "asset management",
-      "wealth management",
-      "investment management",
-      "capital markets",
-      "fixed income",
-      "portfolio management",
+      "private equity intern",
+      "private equity co-op",
+      "venture capital intern",
+      "venture capital co-op",
+      "leveraged buyout intern",
+      // Consulting
+      "management consulting intern",
+      "management consulting co-op",
+      "strategy consulting intern",
+      "consulting intern",
+      // Finance
+      "corporate finance intern",
+      "corporate finance co-op",
+      "equity research intern",
+      "equity research co-op",
+      "hedge fund intern",
+      "asset management intern",
+      "wealth management intern",
+      "investment management intern",
+      "capital markets intern",
+      "fixed income intern",
+      "portfolio management intern",
       "accounting intern",
+      "accounting co-op",
       "audit intern",
       "tax intern",
-      "financial planning",
+      "financial planning intern",
       // Insurance / Actuarial
-      "actuarial",
-      "actuary",
-      "underwriting",
+      "actuarial intern",
+      "actuarial co-op",
+      "actuary intern",
+      "underwriting intern",
       // Healthcare / Pharma Business
-      "healthcare consulting",
-      "pharma analyst",
-      "hospital operations",
+      "healthcare consulting intern",
+      "pharma analyst intern",
+      "hospital operations intern",
       // Corporate strategy
-      "corporate development",
-      "corporate strategy",
+      "corporate development intern",
+      "corporate strategy intern",
       "business development intern",
-      "real estate analyst",
+      "real estate analyst intern",
     ],
 
     locations: ["United States", "Remote"],
@@ -125,6 +146,9 @@ export default {
 
     // Seniority exclusions
     titleExclude: ["senior", "staff", "principal", "vp ", "managing director", "partner", "director"],
+
+    // Only alert on internships and co-ops — reject any full-time title
+    internOnly: true,
 
     // If ANY of these words appear in the title, it's a tech role — reject it
     // even if a business keyword matched (e.g. "Business Analyst - Software Systems")
